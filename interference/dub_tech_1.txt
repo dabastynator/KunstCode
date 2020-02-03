@@ -1,0 +1,346 @@
+use_debug true
+use_bpm 130
+
+notes_m1 = stretch([:d1,:d1,:f1,:d1, :d1,:d1,:d1,:d1], 16).ring
+notes_m2 = stretch([:d1,:d1,:f1,:d1, :d1,:d1,:f1,:a1], 16).ring
+bass_notes = notes_m2
+
+amp_kick = 0
+amp_hats = 0
+amp_bass = 0
+amp_snare = 0
+amp_beep = 0
+amp_acid = 0
+amp_wow = 0
+
+fx_snare = 1
+snare_type = 1
+fx_beep = 1
+fx_acid = 0.15
+
+
+live_loop :master, sync: :kick do
+  #stop
+  amp_kick = 0
+  amp_hats = 0
+  amp_bass = 0
+  amp_snare = 0
+  amp_beep = 0
+  amp_acid = 0
+  amp_wow = 0
+  amp_noise = 0
+  
+  fx_snare = 0
+  fx_beep = 0
+  fx_acid = 0.15
+  snare_type = 0
+  
+  # build kick
+  48.times do |n|
+    amp_kick = n / 48.0
+    sleep 1
+  end
+  amp_kick = 1
+  
+  # build bass hats
+  64.times do |n|
+    amp_bass = n / 64.0
+    amp_hats = n / 64.0
+    sleep 1
+  end
+  amp_bass = 1
+  amp_hats = 1
+  
+  # build snare
+  amp_kick = 0
+  amp_bass = 1
+  amp_hats = 1
+  hats_noise(20.0, 20)
+  sleep 8
+  
+  amp_hats_long = 0
+  amp_kick = 1
+  amp_bass = 1
+  amp_hats = 1
+  amp_snare = 0.7
+  
+  # play with snare
+  sleep 32
+  fx_snare = 1
+  sleep 48
+  fx_snare = 0
+  hats_noise(20.0, 10)
+  
+  # buil beep
+  fx_beep = 0
+  amp_kick = 1
+  amp_hats = 0
+  #amp_bass = 0
+  amp_snare = 1
+  64.times do |n|
+    amp_beep = n / 64.0
+    sleep 1
+  end
+  amp_hats = 1
+  amp_beep = 1
+  amp_kick = 0
+  amp_bass = 0
+  amp_snare = 0
+  fx_beep = 1
+  sleep 24
+  amp_wow = 1
+  
+  # Now all
+  amp_kick = 1
+  amp_hats = 1
+  amp_bass = 1
+  amp_snare = 1
+  amp_beep = 1
+  
+  fx_snare = 1
+  fx_beep = 1
+  sleep 8 * 14
+  
+  # build acid
+  fx_snare = 0
+  24.times do |n|
+    amp_acid = n / 24.0
+    amp_beep = 1 - amp_acid
+    sleep 1
+  end
+  
+  amp_kick = 0
+  amp_hats = 0
+  amp_bass = 0
+  amp_snare = 0
+  amp_beep = 0
+  fx_acid = 0.25
+  sleep 24
+  snare_rais(16)
+  sleep 8
+  amp_kick = 1
+  amp_hats = 1
+  amp_bass = 1
+  amp_snare = 1
+  fx_acid = 0.15
+  
+  snare_type = 1
+  sleep 24
+  
+  # play with acid
+  48.times do |n|
+    r = n / 48.0
+    fx_acid = 0.15 * (1-r) + 0.5 * r
+    sleep 1
+  end
+  48.times do |n|
+    r = n / 48.0
+    fx_acid = 0.5 * (1-r) + 0.05 * r
+    sleep 1
+  end
+  48.times do |n|
+    r = n / 48.0
+    fx_acid = 0.05 * (1-r) + 0.15 * r
+    sleep 1
+  end
+  
+  amp_beep = 1
+  snare_type = 0
+  sleep 48
+  fx_acid = 0.05
+  sleep 64
+  fx_acid = 0.5
+  amp_bass = 0
+  amp_beep = 0
+  sleep 16
+  hats_noise(16.0, 20)
+  sleep 8
+  fx_acid = 0.05
+  amp_bass = 1
+  amp_beep = 1
+  sleep 24
+  
+  sleep 8
+  
+  # Fade out
+  24.times do |n|
+    amp_snare = 1.0 - n / 24.0
+    amp_bass = 1.0 - n / 24.0
+    amp_hats = 1.0 - n / 24.0
+    amp_acid = 1.0 - n / 24.0
+    amp_beep = n / 24.0
+    amp_wow = 1.0 - n / 24.0
+    sleep 1
+  end
+  amp_snare = 0
+  amp_bass = 0
+  amp_hats = 0
+  amp_acid = 0
+  24.times do |n|
+    r = n / 24.0
+    #amp_kick = 1.0 - r
+    kick_cutoff = ring([25 * r + 130 * (1 - r)])
+    sleep 1
+  end
+  amp_kick = 0
+  24.times do |n|
+    amp_beep = 1.0 - n / 24.0
+    sleep 1
+  end
+  amp_beep = 0
+  stop
+end
+
+kick_cutoff = range(80, 130, 0.5).mirror.ring
+live_loop :kick do
+  cue :kick
+  4.times do
+    #sample :bd_tek, amp: amp_kick, cutoff: kick_cutoff.tick
+    sample :bd_haus, amp: 1.5 * amp_kick, rate: 0.5, cutoff: kick_cutoff.tick
+    sleep 1
+  end
+end
+
+def hats_noise(tickcount, slice_pos)
+  in_thread do
+    with_fx :slicer, phase: 1, phase_slide: 10, mix: 0, mix_slide: 5, smooth: 5, smooth_slide: 10 do |slice|
+      with_fx :reverb, room: 0.8, damp: 0.9 do
+        with_fx :rhpf, cutoff: 120 do
+          with_synth :pnoise do
+            tickcount.times do |n|
+              r = [(n*2) / (tickcount-1),  2 - (n*2) / (tickcount-1)].min
+              play 1, amp: r, attack: 0.1, release: 3
+              if n == slice_pos then
+                control slice, mix: 1, phase: 0.1, smooth: 0.05
+              end
+              sleep 1
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+
+def hihat(v)
+  play 1, amp: v * 1, attack: 0.1, release: 0.1
+end
+
+
+hihat_pattern = [1,0,1,0, 0,1,0,1, 1,0,0,1, 0,0,1,0].ring
+
+with_fx :rhpf, cutoff: 120 do
+  with_synth :pnoise do
+    live_loop :hihats do
+      #sync :kick
+      4.times do
+        hihat(amp_hats * hihat_pattern.tick)
+        sleep 0.25
+      end
+    end
+  end
+end
+
+
+with_fx :rhpf, cutoff: 120 do
+  with_synth :pnoise do
+    live_loop :hihats_bg do
+      #sync :kick
+      phase = [0.25, 0.25, 0.25, 0.133].ring.tick
+      with_fx :slicer, mix: 1, phase: phase, pulse_width: 0.1 do
+        play 1, amp: amp_hats * 0.6, decay: 1, release: 0
+        sleep 1
+      end
+    end
+  end
+end
+
+live_loop :wow do
+  use_synth :fm
+  sleep 7
+  play :d1, amp: amp_wow, attack: 0.5, release: 1, divisor: 0.5, depth: 6
+  sleep 1
+end
+
+bass_note = :d1
+bass_pattern = [1,0,0,0.5, 0,0.5,1,0].ring
+live_loop :bassline do
+  i = tick
+  use_synth :fm
+  bass_note = bass_notes[i]
+  play bass_note + 12, amp: amp_bass * bass_pattern[i]
+  sleep 0.25
+end
+
+def snare(vol, type)
+  case type
+  when 0
+    sample :sn_dolf, amp: vol, attack: 0, sustain: 0, decay: 0.1, release: 0.1
+  when 1
+    with_fx :pan, pan: [-0.6, -0.3, 0, 0.3, 0.6].choose do
+      with_fx :reverb, mix: 0.3, room: [1, 0.8, 0.2].choose do
+        with_fx :echo, mix: 0.4, decay: 15, phase: [0.75, 0.5, 0.333, 0.25].choose do
+          special_amp = [1, 0.6, 0.3].choose
+          sample :sn_dolf, amp: 0.8 * vol, attack: 0, sustain: 0, decay: 0.1, release: 0.1
+        end
+      end
+    end
+  end
+end
+
+live_loop :snare do
+  sync :kick
+  case snare_type
+  when 0
+    sleep 2
+    type = [0, 0, 0, 0, 0, 1].choose * fx_snare
+    snare(amp_snare * 0.8, type)
+  when 1
+    sleep 1
+    type = [0, 0, 0, 0, 0, 1].choose * fx_snare
+    snare(amp_snare * 0.8, type)
+    sleep 2
+    type = [0, 0, 0, 0, 0, 1].choose * fx_snare
+    snare(amp_snare * 0.8, type)
+  end
+end
+
+def snare_rais(tickcount)
+  in_thread do
+    tickcount = tickcount * 4
+    tickcount.times do |n|
+      r = [(n*2.0) / (tickcount-1.0),  2.0 - (n*2.0) / (tickcount-1.0)].min
+      snare(r * 0.4, 0)
+      sleep 0.25
+    end
+  end
+end
+
+def beep(v, note)
+  c = play chord(note + 12 * 3, :minor), amp: v, pan: -0.4, pan_slide: 1, release: 1
+  control c, pan: 0.4
+end
+
+live_loop :beep do
+  sync :kick
+  #use_synth :hollow
+  with_fx :reverb do
+    with_fx :slicer, phase: [0.125, 0.25, 0.5].choose, mix: fx_beep, smooth: 0.1 do
+      sleep 1
+      beep(amp_beep, bass_note)
+      sleep 2
+      beep(amp_beep, bass_note)
+    end
+  end
+end
+
+live_loop :acid, sync: :kick do
+  use_synth :tb303
+  7.times do
+    play (octs, bass_note, 3).tick, release: fx_acid, cutoff: rrand(40, 120), amp: amp_acid * 0.1
+    sleep 0.25
+  end
+end
+
+
